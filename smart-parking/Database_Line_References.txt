@@ -1,0 +1,79 @@
+======================================================
+DATABASE LINE REFERENCES MAP - SMART PARKING SYSTEM 
+======================================================
+This document maps identical line locations indicating where all Database Actions (DML, Procedures, Functions, and Views) occur across the Node.js backend files and inside the MySQL Database natively.
+
+---------------------------------------------------
+1. DML: INSERT, UPDATE, SELECT (NODE.JS BACKEND DIRECT CALLS)
+---------------------------------------------------
+FILE: backend/routes/auth.js
+- Line 18: SELECT user_id FROM USER WHERE email = ?
+- Line 24: INSERT INTO USER (name, email, phone, password_hash)
+- Line 44: SELECT * FROM USER WHERE email = ?
+- Line 84: SELECT * FROM VEHICLE WHERE user_id = ?
+
+FILE: backend/routes/slots.js
+- Line 24: INSERT INTO VEHICLE (vehicle_number, vehicle_type, user_id)
+- Line 43: SELECT pl.lot_id, pl.floor_no, pl.slot_no, pl.slot_status (Slots query)
+
+FILE: backend/routes/booking.js
+- Line 23: SELECT slot_status FROM PARKING_LOT WHERE lot_id = ?
+- Line 32: SELECT @p_booking_id AS booking_id
+- Line 36: SELECT lock_expires_at FROM BOOKING WHERE booking_id = ?
+- Line 57: SELECT booking_status FROM BOOKING WHERE booking_id = ?
+- Line 83: SELECT b.booking_id, v.vehicle_number... (Fetching Receipt details via JOIN)
+- Line 107: SELECT * FROM vw_active_bookings WHERE user_id = ? (VIEW FETCH)
+- Line 110: SELECT p.payment_id, b.booking_time... (Fetching Past Bookings via JOIN)
+
+
+---------------------------------------------------
+2. STORED PROCEDURES (NODE.JS EXECUTIONS)
+---------------------------------------------------
+FILE: backend/routes/booking.js
+- Line 31: CALL sp_book_slot(?, ?, ?, @p_booking_id) 
+           (Triggers Database natively to INSERT the initial Locked Booking & Pending Payment)
+- Line 62: CALL sp_confirm_payment(?, ?) 
+           (Triggers Database natively to UPDATE the Booking status to Active)
+- Line 80: CALL sp_record_exit(?) 
+           (Forces the Database Engine to calculate pricing mathematically & finalize completion)
+
+FILE: backend/routes/slots.js
+- Line 73: CALL sp_floor_occupancy_report() 
+           (Fetches live aggregated data representing floor counts used for Dashboard headers)
+
+FILE: backend/jobs/expireLocks.js
+- Line 10: CALL sp_expire_locks() 
+           (Executed by Node every 30 seconds to strictly purge abandoned timeouts)
+
+
+---------------------------------------------------
+3. NATIVE DML (EXECUTED INSIDE MYSQL - schema.sql)
+---------------------------------------------------
+The Node backend rarely updates logic cleanly on its own. Instead, here is exactly where the MySQL Database (schema.sql) natively fires DMLs internally upon receiving Calls:
+
+FILE: sql/schema.sql
+- Line 153 [Inside sp_book_slot]: INSERT INTO BOOKING ...
+- Line 158 [Inside sp_book_slot]: INSERT INTO PAYMENT ...
+- Line 166 [Inside sp_confirm_payment]: UPDATE BOOKING SET booking_status = 'Active' ...
+- Line 170 [Inside sp_confirm_payment]: UPDATE PAYMENT SET payment_status = 'Paid' ...
+- Line 186 [Inside sp_record_exit]: SELECT p.entry_time, v.vehicle_type, pl.zone ... (Fetches math variables)
+- Line 196 [Inside sp_record_exit]: UPDATE PAYMENT SET exit_time = NOW() ...
+- Line 200 [Inside sp_record_exit]: UPDATE BOOKING SET booking_status = 'Completed' ...
+- Line 210 [Inside sp_expire_locks]: UPDATE BOOKING SET booking_status = 'Expired' ...
+
+- Line 240 [Inside trg_after_booking_insert]: UPDATE PARKING_LOT SET slot_status = 'Locked' ...
+- Line 251 [Inside trg_after_booking_update]: UPDATE PARKING_LOT SET slot_status = 'Occupied' ...
+- Line 254 [Inside trg_after_booking_update]: UPDATE PARKING_LOT SET slot_status = 'Available' ...
+
+
+---------------------------------------------------
+4. FUNCTIONS & VIEWS (NATIVE MYSQL LOGIC)
+---------------------------------------------------
+FILE: sql/schema.sql
+(Functions - Isolates calculation rules dynamically)
+- Line 112: fn_calculate_duration - Internal function called intrinsically during 'sp_record_exit'.
+- Line 122: fn_calculate_amount - Internal modifier function intrinsically queried during 'sp_record_exit'.
+
+(Views - Virtual Tables hiding extreme query complexities)
+- Line 82: vw_available_slots - Resolves raw DB availability and automatically calculates standard pricing modifiers in advance cleanly.
+- Line 95: vw_active_bookings - Collapses 5-table schema into a single queryable list (Referenced directly on backend/booking.js Line 107).

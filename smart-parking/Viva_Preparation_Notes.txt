@@ -1,0 +1,80 @@
+======================================================
+VIVA PREPARATION NOTES - SMART PARKING SYSTEM 
+======================================================
+
+These concise notes are designed to provide rapid memorization bullet points for each specific role regarding technical implementation execution in the Smart Parking project.
+
+------------------------------------------------------
+1. AYUSH (ROLE: BACKEND API & NODE.JS)
+------------------------------------------------------
+• Architecture Overview
+  - Built using Node.js and Express.js to provide a fast, non-blocking REST API architecture.
+  - Divided system logic into specific routers: `/api/auth`, `/api/slots`, and `/api/booking` to keep code clean and modular.
+• Database Connectivity & Management
+  - Utilized the `mysql2/promise` module wrapper purely for asynchronous processing.
+  - Implemented Connection Pooling (pool limit set to 10) to efficiently handle multiple concurrent users without opening/closing TCP connections repetitively.
+  - Developed an automated schema bootstrapper inside `db.js`. It explicitly connects, executes a `CREATE DATABASE IF NOT EXISTS`, split-parses the `schema.sql` file via custom `-- SPLIT` delimiters, and executes all DDL/DML statements sequentially.
+• Authentication & Security Flow
+  - Plaintext passwords injected during `/register` are hashed using the `bcrypt` library before being stored in the database.
+  - Used the `express-session` middleware for secure user state tracking.
+  - Successful `/login` responds by injecting an HTTP-only state cookie into the browser, securely mapping the session state to the unique user without exposing auth tokens to client-side XSS capabilities.
+• Background Cron Job (Lock Purging)
+  - The 2-minute booking lock system requires absolute server-side monitoring to avoid client-side manipulation.
+  - Built an internal daemon using a native `setInterval()` loop inside `expireLocks.js` that fires every 30 seconds.
+  - The job securely calls the database's `sp_expire_locks()` stored procedure, reducing node server computational overhead to zero while letting MySQL natively scrub expired locks.
+
+
+------------------------------------------------------
+2. TIYA (ROLE: FRONTEND LOGIC, UI & UX)
+------------------------------------------------------
+• UI/UX Design Philosophy & Implementation
+  - Pure Vanilla execution: No CSS libraries (Tailwind/Bootstrap) or JS frameworks (React/Vue/Angular) were used to demonstrate true DOM manipulation and styling competency.
+  - Implemented CSS Grid and Flexbox to architect dynamic grid layouts, ensuring the complex parking slot interfaces are fully responsive.
+  - Utilized a trending "Glassmorphism" effect natively for modals using semi-transparent RGBA background colors combined directly with the `backdrop-filter: blur(8px)` property over a crisp dashboard theme.
+• Typography Handling
+  - Imported two distinct Google Fonts to establish immediate visual hierarchy.
+  - Core UI labels and headers use `Inter` for strong sans-serif readability.
+  - Identifiers, monetary outputs, and vehicle plates use `JetBrains Mono` to cleanly contrast critical technical outputs from general text.
+• Frontend-Backend Connection
+  - Functions entirely through the native Web `fetch` API for all network requests.
+  - Modularized a centralized `apiCall()` wrapper strictly typing and parsing incoming JSON payloads. This wrapper intercepts `401 Unauthorized` responses implicitly to force-redirect unauthenticated actors cleanly to `/login.html`.
+• Real-time Dashboard Synchronization
+  - The dashboard operates via a background lightweight UI-polling mechanic.
+  - Calling `setInterval(fetchInitialData, 5000)` asynchronously hits `/api/slots` and `/api/my-bookings` every 5 seconds.
+  - Reactively sweeps existing DOM nodes dynamically using JavaScript template literals, instantly shifting slot UI colors (Green = Available, Amber = Locked, Red = Occupied) without demanding any manual user browser refresh.
+• Client-Side Validation
+  - Client interface is blocked firmly by a visual 2-minute modal timer that calculates the delta strictly locked to the database's `lock_expires_at` timestamp response.
+  - Enforced client forms securely natively using HTML required checks before passing stringified JSON payloads.
+
+
+------------------------------------------------------
+3. MAANYA (ROLE: TESTING & INTEGRATION)
+------------------------------------------------------
+• Application Integration Trace
+  - Mapped exactly how front-end `fetch` requests route through Express endpoints mapped directly to parameterized MySQL queries logically.
+  - Specifically traced the Exit sequence map: (1) Dashboard `Exit & Pay` button passes `booking_id`. (2) `POST /api/exit` router catches parameter safely. (3) Backend fires `CALL sp_record_exit(?)`. (4) Database applies its custom procedure `fn_calculate_amount`. (5) JSON response successfully pipes the calculated duration and billing back up the chain, immediately populating the GUI visual Receipt Modal parameters natively.
+• Constraint Testing & Error Handling
+  - Validated primary and unique key structural adherence: Tests pushing duplicate email payloads or double vehicle registries correctly trigger absolute MySQL logic Error 1062, which the backend layer catches securely and maps natively to a clean UI exception rendering as a visible red-toast "Vehicle Already Exists".
+• Concurrency & Race Condition Validation
+  - Validated the system architecture against concurrency faults by initiating two distinct users across tabs, confirming only the first payload locks the available node, returning failure to the lagging actor.
+  - Tested Lock workflow resilience by intentionally permitting the 2-minute timer to lapse across the dashboard grid, testing that the MySQL DB natively resets slots reliably behind-the-scenes using the `sp_expire_locks()` sweep.
+
+
+------------------------------------------------------
+4. ALL TEAM MEMBERS (SHARED: DATABASE LOGIC)
+------------------------------------------------------
+• Custom Pricing Formula Logic
+  - The pricing strategy leverages deeply aggregated relational data, isolating calculations strictly into Native Database Functions (`fn_calculate_amount`, `fn_calculate_duration`) rather than application files.
+  - Base Duration Rule: The exit timestamps are queried via `TIMESTAMPDIFF()` explicitly bounded to an absolute 1-hour minimal rounding calculation.
+  - Base Modifiers applied natively querying `vehicle_type`: 2W (₹15), 4W (₹40), Heavy (₹80).
+  - Zone Cost Surcharges statically evaluated: Gate (+₹20 premium layout), Middle (₹0 base calculation), Far (-₹10 walking penalty discount).
+• Stored Procedures Overview
+  - Logic boundaries are centrally isolated directly within active Stored Procedures (`sp_book_slot`, `sp_confirm_payment`, `sp_record_exit`).
+  - Consolidating bulk transactional updates and cascading ledger writes into the Database layer stops excessive sequential queries crossing over the runtime payload network, enforcing absolute ACID (Atomicity, Consistency, Isolation, Durability) principles.
+• Database Triggers Implementation
+  - Developed logical enforcement via `trg_after_booking_insert` and `trg_after_booking_update`.
+  - The `BOOKING` table functionally works as the exact chronological ledger. Triggers rigorously demand all states replicate blindly to the corresponding `PARKING_LOT` inventory representations instantly.
+  - Eg. By changing a booking enum from 'Locked' to 'Active', the Update Trigger autonomously overwrites `PARKING_LOT` row parameters changing 'Available' cleanly to 'Occupied', meaning the backend Express.js system lacks the power to ever create an out-of-sync logic error.
+• Database Views Optimization
+  - `vw_available_slots`: Simplifies UI API mapping logic by evaluating only immediately unassigned slots alongside dynamic computation merging of varying parameters (Zones, Type surcharges) on demand.
+  - `vw_active_bookings`: Collapses notoriously convoluted normalized MySQL JOIN blocks linking USER, VEHICLE, BOOKING, PARKING_LOT, and PAYMENT tables natively to instantly respond with perfectly formatted arrays for the logged-in user UI.

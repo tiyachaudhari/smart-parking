@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Smart Parking</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo">SmartPark</div>
+        <a href="#" class="nav-link active">Dashboard</a>
+        <a href="#" class="nav-link">My Bookings</a>
+        <div style="flex: 1;"></div>
+        <button id="logoutBtn" class="btn-outline" style="color: white; border-color: rgba(255,255,255,0.2);">Logout</button>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <header class="top-header">
+            <div class="header-left">
+                <span class="welcome">Welcome, <span id="userName">User</span></span>
+                <span class="user-id">ID: #<span id="userId"></span></span>
+            </div>
+            <div class="header-right">
+                <div id="vehiclePills" style="display:flex; gap: 0.5rem; flex-wrap: wrap;"></div>
+                <button id="openAddVehicleModal" class="btn-outline">+ Add Vehicle</button>
+            </div>
+        </header>
+
+        <div class="content-area">
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2 style="display: flex; align-items: center; gap: 1rem;">Parking Grid 
+                    <button id="btnRecommendSlot" class="btn-primary" style="background: var(--status-avail); padding: 0.4rem 0.8rem; font-size: 0.85rem;">✨ Auto-Recommend</button>
+                </h2>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <label style="font-weight: 500;">Select Vehicle:</label>
+                    <select id="activeVehicleSelect" style="padding: 0.5rem; border-radius: 6px; border: 1px solid var(--border); font-family: var(--font-ui); min-width: 200px;"></select>
+                </div>
+            </div>
+
+            <div id="activeBookingsPanel" style="margin-bottom: 2rem; display: none;"></div>
+
+            <div id="slotsGridContainer">
+                <!-- Dynamically populated floors -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Booking Modal (Glassmorphism) -->
+    <div class="modal-overlay" id="bookingModal">
+        <div class="glass-modal">
+            <h3 class="modal-title">Confirm Booking</h3>
+            
+            <div style="background: white; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: var(--shadow);">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                    <span style="color: var(--text-secondary);">Slot</span>
+                    <span style="font-weight: 600; font-family: var(--font-mono);" id="modalSlotId">F1-S2</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                    <span style="color: var(--text-secondary);">Zone / Type</span>
+                    <span><span id="modalZone"></span> • <span id="modalType"></span></span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span style="color: var(--text-secondary);">Base Rate</span>
+                    <span style="font-family: var(--font-mono);">₹<span id="modalBaseRate">0</span>/hr</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-secondary);">Zone Surcharge</span>
+                    <span style="font-family: var(--font-mono);">₹<span id="modalSurcharge">0</span> (Flat)</span>
+                </div>
+                <div style="text-align: right; font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">Min. 1 hour charge applies</div>
+            </div>
+
+            <div class="lock-timer-box">
+                Lock expires in:
+                <span class="timer" id="modalLockTimer">02:00</span>
+            </div>
+
+            <div class="form-group">
+                <label>Payment Method</label>
+                <select id="paymentMethod">
+                    <option value="UPI">UPI</option>
+                    <option value="Card">Card</option>
+                    <option value="Cash">Cash</option>
+                </select>
+            </div>
+
+            <button id="confirmPaymentBtn" class="btn-primary" style="margin-top: 1rem;">Confirm Payment</button>
+        </div>
+    </div>
+
+    <!-- Receipt Modal -->
+    <div class="modal-overlay" id="receiptModal">
+        <div class="glass-modal">
+            <h3 class="modal-title">Receipt</h3>
+            <div style="background: white; border-radius: 8px; padding: 1.5rem; box-shadow: var(--shadow);">
+                <div class="receipt-item">
+                    <span style="color: var(--text-secondary);">Entry Time</span>
+                    <span id="recEntry" style="font-family: var(--font-mono); font-size: 0.9rem;"></span>
+                </div>
+                <div class="receipt-item">
+                    <span style="color: var(--text-secondary);">Exit Time</span>
+                    <span id="recExit" style="font-family: var(--font-mono); font-size: 0.9rem;"></span>
+                </div>
+                <div class="receipt-item">
+                    <span style="color: var(--text-secondary);">Duration</span>
+                    <span style="font-family: var(--font-mono);"><span id="recDuration"></span> hrs</span>
+                </div>
+                <div class="receipt-item total">
+                    <span>Total Amount</span>
+                    <span style="font-family: var(--font-mono);">₹<span id="recAmount"></span></span>
+                </div>
+            </div>
+            <button id="closeReceiptBtn" class="btn-primary" style="margin-top: 1.5rem;">Close</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="addVehModal">
+        <div class="glass-modal" style="max-width: 400px;">
+            <h3 class="modal-title">Add Vehicle</h3>
+            <form id="dashAddVehicleForm">
+                <div class="form-group">
+                    <label>Vehicle Number</label>
+                    <input type="text" id="dashVehNumber" required>
+                </div>
+                <div class="form-group">
+                    <label>Vehicle Type</label>
+                    <select id="dashVehType" required>
+                        <option value="2W">2-Wheeler (2W)</option>
+                        <option value="4W">4-Wheeler (4W)</option>
+                        <option value="Heavy">Heavy Vehicle</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="button" class="btn-outline" style="flex:1;" onclick="document.getElementById('addVehModal').classList.remove('active')">Cancel</button>
+                    <button type="submit" class="btn-primary" style="flex:1;">Add</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+    <script src="app.js"></script>
+</body>
+</html>

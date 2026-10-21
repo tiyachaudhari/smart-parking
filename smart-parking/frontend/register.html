@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Smart Parking</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card" id="registerCard">
+            <h2>Create an Account</h2>
+            <form id="registerForm">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="regName" required placeholder="John Doe">
+                </div>
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="regEmail" required placeholder="john@example.com">
+                </div>
+                <div class="form-group">
+                    <label>Phone Number</label>
+                    <input type="tel" id="regPhone" required placeholder="9876543210">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="regPassword" required placeholder="••••••••">
+                </div>
+                <button type="submit" class="btn-primary">Register</button>
+            </form>
+            <div class="auth-footer">
+                Already have an account? <a href="/login.html">Login here</a>
+            </div>
+        </div>
+
+        <!-- Add Vehicle Modal after registration -->
+        <div class="auth-card" id="addVehicleCard" style="display: none;">
+            <h2>Add Your Vehicle</h2>
+            <form id="initialVehicleForm">
+                <div class="form-group">
+                    <label>Vehicle Number</label>
+                    <input type="text" id="vehNumber" required placeholder="MH-12-AB-1234">
+                </div>
+                <div class="form-group">
+                    <label>Vehicle Type</label>
+                    <select id="vehType" required>
+                        <option value="2W">2-Wheeler (2W)</option>
+                        <option value="4W">4-Wheeler (4W)</option>
+                        <option value="Heavy">Heavy Vehicle</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary">Complete Setup</button>
+            </form>
+        </div>
+        
+        <!-- Success Card -->
+        <div class="auth-card" id="successCard" style="display: none; text-align: center;">
+            <h2 style="color: var(--status-avail);">Setup Complete!</h2>
+            <div style="background: var(--bg-light); padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                <p>Your User ID: <span id="successUserId" style="font-family: var(--font-mono); font-weight: 700;"></span></p>
+                <p>Vehicle ID: <span id="successVehId" style="font-family: var(--font-mono); font-weight: 700;"></span></p>
+                <p>Vehicle: <span id="successVehNo" style="font-family: var(--font-mono); font-weight: 700;"></span></p>
+            </div>
+            <p style="color: var(--text-secondary); font-size: 0.875rem;">Redirecting to login in <span id="redirectCountdown" style="font-family: var(--font-mono); font-weight: 700;">3</span>s...</p>
+        </div>
+    </div>
+    <div id="toast-container"></div>
+    <script src="app.js"></script>
+</body>
+</html>
