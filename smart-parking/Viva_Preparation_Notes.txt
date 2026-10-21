@@ -4,9 +4,6 @@ VIVA PREPARATION NOTES - SMART PARKING SYSTEM
 
 These concise notes are designed to provide rapid memorization bullet points for each specific role regarding technical implementation execution in the Smart Parking project.
 
-------------------------------------------------------
-1. AYUSH (ROLE: BACKEND API & NODE.JS)
-------------------------------------------------------
 • Architecture Overview
   - Built using Node.js and Express.js to provide a fast, non-blocking REST API architecture.
   - Divided system logic into specific routers: `/api/auth`, `/api/slots`, and `/api/booking` to keep code clean and modular.
@@ -23,10 +20,6 @@ These concise notes are designed to provide rapid memorization bullet points for
   - Built an internal daemon using a native `setInterval()` loop inside `expireLocks.js` that fires every 30 seconds.
   - The job securely calls the database's `sp_expire_locks()` stored procedure, reducing node server computational overhead to zero while letting MySQL natively scrub expired locks.
 
-
-------------------------------------------------------
-2. TIYA (ROLE: FRONTEND LOGIC, UI & UX)
-------------------------------------------------------
 • UI/UX Design Philosophy & Implementation
   - Pure Vanilla execution: No CSS libraries (Tailwind/Bootstrap) or JS frameworks (React/Vue/Angular) were used to demonstrate true DOM manipulation and styling competency.
   - Implemented CSS Grid and Flexbox to architect dynamic grid layouts, ensuring the complex parking slot interfaces are fully responsive.
@@ -46,10 +39,6 @@ These concise notes are designed to provide rapid memorization bullet points for
   - Client interface is blocked firmly by a visual 2-minute modal timer that calculates the delta strictly locked to the database's `lock_expires_at` timestamp response.
   - Enforced client forms securely natively using HTML required checks before passing stringified JSON payloads.
 
-
-------------------------------------------------------
-3. MAANYA (ROLE: TESTING & INTEGRATION)
-------------------------------------------------------
 • Application Integration Trace
   - Mapped exactly how front-end `fetch` requests route through Express endpoints mapped directly to parameterized MySQL queries logically.
   - Specifically traced the Exit sequence map: (1) Dashboard `Exit & Pay` button passes `booking_id`. (2) `POST /api/exit` router catches parameter safely. (3) Backend fires `CALL sp_record_exit(?)`. (4) Database applies its custom procedure `fn_calculate_amount`. (5) JSON response successfully pipes the calculated duration and billing back up the chain, immediately populating the GUI visual Receipt Modal parameters natively.
@@ -59,10 +48,6 @@ These concise notes are designed to provide rapid memorization bullet points for
   - Validated the system architecture against concurrency faults by initiating two distinct users across tabs, confirming only the first payload locks the available node, returning failure to the lagging actor.
   - Tested Lock workflow resilience by intentionally permitting the 2-minute timer to lapse across the dashboard grid, testing that the MySQL DB natively resets slots reliably behind-the-scenes using the `sp_expire_locks()` sweep.
 
-
-------------------------------------------------------
-4. ALL TEAM MEMBERS (SHARED: DATABASE LOGIC)
-------------------------------------------------------
 • Custom Pricing Formula Logic
   - The pricing strategy leverages deeply aggregated relational data, isolating calculations strictly into Native Database Functions (`fn_calculate_amount`, `fn_calculate_duration`) rather than application files.
   - Base Duration Rule: The exit timestamps are queried via `TIMESTAMPDIFF()` explicitly bounded to an absolute 1-hour minimal rounding calculation.
